@@ -10,9 +10,8 @@ A Flask-based web application for analyzing and visualizing browser history data
   - Downloads analysis
   - Domain statistics
   - Sync data visualization
-- **Data Export**: Export analyzed data in various formats
+- **Data Export**: Export analyzed data
 - **Real-time Processing**: Upload and analyze history files instantly
-- **Responsive Design**: Works on desktop and mobile devices
 
 ## Project Structure
 
