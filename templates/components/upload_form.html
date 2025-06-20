@@ -1,0 +1,18 @@
+<!-- templates/components/upload_form.html -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Upload Browser History File</h5>
+        <p>Select a browser history file to analyze:</p>
+        <ul>
+            <li><strong>Chrome/Edge:</strong> History file from user's profile directory</li>
+            <li><strong>Firefox:</strong> places.sqlite file from profile directory</li>
+        </ul>
+        
+        <form id="uploadForm" method="post" enctype="multipart/form-data" onsubmit="return false;">
+            <div class="mb-3">
+                <input class="form-control" type="file" id="fileInput" name="file">
+            </div>
+            <button type="button" id="analyzeButton" class="btn btn-primary">Analyze History</button>
+        </form>
+    </div>
+</div>

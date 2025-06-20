@@ -1,0 +1,129 @@
+/* Pagination styles */
+.pagination {
+    margin-top: 20px;
+    justify-content: center;
+}
+
+/* Domain statistics */
+.domain-stats {
+    margin-top: 30px;
+    margin-bottom: 20px;
+}
+
+.domain-item {
+    padding: 8px 15px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: space-between;
+}
+
+.domain-count {
+    font-weight: bold;
+    color: #007bff;
+}
+
+/* Download item styles */
+.download-item {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.download-item h5 {
+    margin-top: 0;
+    font-size: 16px;
+    word-break: break-all;
+}
+
+.download-item .badge {
+    font-size: 11px;
+    margin-left: 5px;
+}
+
+/* Download metadata */
+.download-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0;
+    font-size: 13px;
+    color: #666;
+}
+
+.download-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Download source styles */
+.download-source {
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 10px;
+    font-size: 13px;
+    border-left: 3px solid #007bff;
+}
+
+.download-source.same_domain {
+    border-left-color: #28a745;
+}
+
+.download-source.file_pattern {
+    border-left-color: #fd7e14;
+}
+
+.download-source.temporal {
+    border-left-color: #6c757d;
+}
+
+.download-source-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.download-source-url {
+    word-break: break-all;
+    margin-bottom: 5px;
+    color: #007bff;
+}
+
+.download-source-time {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+/* Badge styles */
+.badge-same_domain {
+    background-color: #28a745;
+}
+
+.badge-file_pattern {
+    background-color: #fd7e14;
+}
+
+.badge-temporal {
+    background-color: #6c757d;
+}
+
+/* File type icon */
+.file-type-icon {
+    font-size: 24px;
+    margin-right: 10px;
+}
+
+/* Toggle sources button */
+.toggle-sources {
+    background: none;
+    border: none;
+    color: #007bff;
+    font-size: 13px;
+    padding: 0;
+    cursor: pointer;
+}

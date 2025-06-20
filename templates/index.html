@@ -1,0 +1,70 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+    <!-- Upload Form -->
+    {% include 'components/upload_form.html' %}
+    
+    <!-- Loading Indicator -->
+    {% include 'components/loader.html' %}
+    
+    <!-- Results Container -->
+    <div id="resultsContainer" class="hidden">
+        <!-- Summary -->
+        {% include 'components/summary.html' %}
+               
+        <!-- Tabs -->
+        {% include 'components/tabs.html' %}
+        
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Timeline Panel -->
+            {% include 'panels/timeline_panel.html' %}
+            
+            <!-- Downloads Panel -->
+            {% include 'panels/downloads_panel.html' %}
+            
+            <!-- Domains Panel -->
+            {% include 'panels/domains_panel.html' %}
+            
+            <!-- Sync Panel -->
+            {% include 'panels/sync_panel.html' %}
+        </div>
+    </div>
+
+    <!-- Add this just before the closing body tag -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Debug tab clicks
+    const tabs = document.querySelectorAll('[data-bs-toggle="tab"]');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function(event) {
+            console.log("Tab clicked:", this.id, "Target:", this.getAttribute('data-bs-target'));
+            
+            // Check if target panel exists
+            const targetId = this.getAttribute('data-bs-target');
+            const targetPanel = document.querySelector(targetId);
+            console.log("Target panel exists:", !!targetPanel);
+            
+            // Check panel content
+            if (targetPanel) {
+                const containerIds = {
+                    '#downloads-content': 'downloadsContainer',
+                    '#domains-content': 'domainStats',
+                    '#sync-content': 'syncContainer',
+                    '#timeline-content': 'historyTableBody'
+                };
+                
+                const containerId = containerIds[targetId];
+                if (containerId) {
+                    const container = document.getElementById(containerId);
+                    console.log(`Container '${containerId}' exists:`, !!container);
+                    if (container) {
+                        console.log(`Container content:`, container.innerHTML.substring(0, 100) + '...');
+                    }
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

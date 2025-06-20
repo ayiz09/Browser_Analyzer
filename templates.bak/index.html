@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser History Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .container { max-width: 1200px; }
+        .hidden { display: none; }
+        .table-container { max-height: 600px; overflow-y: auto; margin-top: 20px; }
+        .loader { 
+            border: 16px solid #f3f3f3;
+            border-top: 16px solid #3498db;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .pagination {
+            margin-top: 20px;
+            justify-content: center;
+        }
+        .domain-stats {
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+        .domain-item {
+            padding: 8px 15px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+        }
+        .domain-count {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .download-item {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .download-item h5 {
+            margin-top: 0;
+            font-size: 16px;
+            word-break: break-all;
+        }
+        .download-item .badge {
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        .download-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+            font-size: 13px;
+            color: #666;
+        }
+        .download-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .download-source {
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 13px;
+            border-left: 3px solid #007bff;
+        }
+        .download-source.same_domain {
+            border-left-color: #28a745;
+        }
+        .download-source.file_pattern {
+            border-left-color: #fd7e14;
+        }
+        .download-source.temporal {
+            border-left-color: #6c757d;
+        }
+        .download-source-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        .download-source-url {
+            word-break: break-all;
+            margin-bottom: 5px;
+            color: #007bff;
+        }
+        .download-source-time {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .badge-same_domain {
+            background-color: #28a745;
+        }
+        .badge-file_pattern {
+            background-color: #fd7e14;
+        }
+        .badge-temporal {
+            background-color: #6c757d;
+        }
+        .file-type-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        .toggle-sources {
+            background: none;
+            border: none;
+            color: #007bff;
+            font-size: 13px;
+            padding: 0;
+            cursor: pointer;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #dee2e6;
+        }
+        .sync-info-card {
+            margin-bottom: 20px;
+            border-left: 4px solid #6610f2;
+        }
+        .sync-account-info {
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .sync-data-types {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .sync-data-type {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #e9ecef;
+            border-radius: 15px;
+            font-size: 13px;
+        }
+        .sync-data-type.enabled {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        .sync-data-type.disabled {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+        .sync-visit-table {
+            margin-top: 20px;
+        }
+        .sync-timestamp {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .visit-source-badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+        .source-synced {
+            background-color: #cff4fc;
+            color: #055160;
+        }
+        .source-browsed {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        .source-extension {
+            background-color: #e2e3e5;
+            color: #41464b;
+        }
+        .source-imported {
+            background-color: #fff3cd;
+            color: #664d03;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Browser History Analyzer</h1>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Upload Browser History File</h5>
+                <p>Select a browser history file to analyze:</p>
+                <ul>
+                    <li><strong>Chrome/Edge:</strong> History file from user's profile directory</li>
+                    <li><strong>Firefox:</strong> places.sqlite file from profile directory</li>
+                </ul>
+                
+                <form id="uploadForm">
+                    <div class="mb-3">
+                        <input class="form-control" type="file" id="fileInput">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Analyze History</button>
+                </form>
+            </div>
+        </div>
+        
+        <div id="loader" class="loader hidden"></div>
+        
+        <div id="resultsContainer" class="hidden">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Summary</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <p><strong>Browser Type:</strong> <span id="browserType"></span></p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Total Entries:</strong> <span id="totalEntries"></span></p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <button id="exportButton" class="btn btn-success">Export to CSV</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <ul class="nav nav-tabs mb-4" id="resultTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline-content" type="button" role="tab">Timeline Analysis</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="downloads-tab" data-bs-toggle="tab" data-bs-target="#downloads-content" type="button" role="tab">Downloads Analysis</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="domains-tab" data-bs-toggle="tab" data-bs-target="#domains-content" type="button" role="tab">Domain Analysis</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="sync-tab" data-bs-toggle="tab" data-bs-target="#sync-content" type="button" role="tab">Synchronized Browser</button>
+                </li>
+            </ul>
+            
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="timeline-content" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">History Timeline</h5>
+                            
+                            <div class="mb-3">
+                                <input type="text" id="searchInput" class="form-control" placeholder="Search URLs, titles, or domains...">
+                            </div>
+                            
+                            <div class="table-container">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Title</th>
+                                            <th>URL</th>
+                                            <th>Visit Time</th>
+                                            <th>Domain</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historyTableBody">
+                                        <!-- History entries will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Pagination -->
+                            <nav aria-label="History navigation">
+                                <ul class="pagination" id="pagination">
+                                    <!-- Pagination links will be inserted here -->
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="downloads-content" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Downloads Analysis</h5>
+                            
+                            <div class="mb-3">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <input type="text" id="downloadSearchInput" class="form-control" placeholder="Search downloaded files...">
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <button id="exportDownloadsButton" class="btn btn-success">Export Downloads to CSV</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="downloadsContainer">
+                                <!-- Downloads will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="domains-content" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Domain Analysis</h5>
+                            
+                            <div id="domainStats" class="domain-stats">
+                                <!-- Domain statistics will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="sync-content" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Synchronized Browser Analysis</h5>
+                            
+                            <div id="syncContainer">
+                                <!-- Sync data will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Include Bootstrap JS for tabs -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // DOM Elements
+        const uploadForm = document.getElementById('uploadForm');
+        const fileInput = document.getElementById('fileInput');
+        const loader = document.getElementById('loader');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const browserTypeElement = document.getElementById('browserType');
+        const totalEntriesElement = document.getElementById('totalEntries');
+        const historyTableBody = document.getElementById('historyTableBody');
+        const searchInput = document.getElementById('searchInput');
+        const downloadSearchInput = document.getElementById('downloadSearchInput');
+        const exportButton = document.getElementById('exportButton');
+        const exportDownloadsButton = document.getElementById('exportDownloadsButton');
+        const pagination = document.getElementById('pagination');
+        const domainStats = document.getElementById('domainStats');
+        const downloadsContainer = document.getElementById('downloadsContainer');
+        const syncContainer = document.getElementById('syncContainer');
+        
+        // Current state
+        let currentFileId = null;
+        let currentPage = 1;
+        let totalPages = 1;
+        let pageSize = 1000;
+        let currentData = null;
+        
+        // Check for existing file_id in localStorage
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedFileId = localStorage.getItem('currentFileId');
+            if (savedFileId) {
+                console.log('Found saved file ID:', savedFileId);
+                currentFileId = savedFileId;
+                loadData(savedFileId);
+            }
+        });
+        
+        // Event listeners
+        uploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            uploadFile();
+        });
+        
+        searchInput.addEventListener('input', filterTable);
+        downloadSearchInput.addEventListener('input', filterDownloads);
+        
+        exportButton.addEventListener('click', function() {
+            if (currentFileId) {
+                console.log('Exporting file with ID:', currentFileId);
+                window.location.href = `/export/${currentFileId}`;
+            } else {
+                alert('No data available to export. Please upload a history file first.');
+            }
+        });
+        
+        exportDownloadsButton.addEventListener('click', function() {
+            if (currentFileId) {
+                console.log('Exporting downloads with ID:', currentFileId);
+                window.location.href = `/export_downloads/${currentFileId}`;
+            } else {
+                alert('No data available to export. Please upload a history file first.');
+            }
+        });
+        
+        // Load initial data from saved file_id
+        function loadData(fileId) {
+            if (!fileId) return;
+            
+            // Show loader
+            loader.classList.remove('hidden');
+            resultsContainer.classList.add('hidden');
+            
+            // Send request
+            fetch(`/get_page?file_id=${fileId}&page=1&page_size=${pageSize}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load data');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Store current data
+                currentData = data;
+                currentFileId = data.file_id;
+                currentPage = data.page;
+                totalPages = data.total_pages;
+                
+                // Save file ID to localStorage
+                localStorage.setItem('currentFileId', currentFileId);
+                
+                // Display results
+                displayResults(data);
+                
+                // Generate pagination
+                generatePagination();
+                
+                // Calculate domain statistics
+                calculateDomainStats(data.entries);
+                
+                // Display downloads
+                displayDownloads(data.downloads, data.download_sources);
+                
+                // Display sync information
+                if (data.sync_info) {
+                    displaySyncInfo(data.sync_info);
+                } else {
+                    // If no sync info in the current data, fetch it separately
+                    fetchSyncInfo(currentFileId);
+                }
+                
+                // Hide loader, show results
+                loader.classList.add('hidden');
+                resultsContainer.classList.remove('hidden');
+            })
+            .catch(error => {
+                console.error('Error loading data:', error);
+                loader.classList.add('hidden');
+                
+                // Clear saved file ID if it's invalid
+                localStorage.removeItem('currentFileId');
+                currentFileId = null;
+            });
+        }
+        
+        // Upload and process file
+        function uploadFile() {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file first');
+                return;
+            }
+            
+            // Reset state
+            currentPage = 1;
+            
+            // Show loader
+            loader.classList.remove('hidden');
+            resultsContainer.classList.add('hidden');
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('page', currentPage);
+            formData.append('page_size', pageSize);
+            
+            // Send request
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    loader.classList.add('hidden');
+                    return;
+                }
+                
+                // Store current data and file ID
+                currentData = data;
+                currentFileId = data.file_id;
+                totalPages = data.total_pages;
+                
+                // Save file ID to localStorage for persistence
+                localStorage.setItem('currentFileId', currentFileId);
+                console.log('Saved file ID to localStorage:', currentFileId);
+                
+                // Display results
+                displayResults(data);
+                
+                // Generate pagination
+                generatePagination();
+                
+                // Calculate domain statistics
+                calculateDomainStats(data.entries);
+                
+                // Display downloads
+                displayDownloads(data.downloads, data.download_sources);
+                
+                // Display sync information
+                if (data.sync_info) {
+                    displaySyncInfo(data.sync_info);
+                } else {
+                    // If no sync info in the current data, fetch it separately
+                    fetchSyncInfo(currentFileId);
+                }
+                
+                // Hide loader, show results
+                loader.classList.add('hidden');
+                resultsContainer.classList.remove('hidden');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error uploading file: ' + error.message);
+                loader.classList.add('hidden');
+            });
+        }
+        
+        // Fetch sync information
+        function fetchSyncInfo(fileId) {
+            if (!fileId) return;
+            
+            fetch(`/get_sync_info?file_id=${fileId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load sync data');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.sync_info) {
+                    displaySyncInfo(data.sync_info);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading sync data:', error);
+                syncContainer.innerHTML = `
+                    <div class="alert alert-warning" role="alert">
+                        Failed to load synchronization information: ${error.message}
+                    </div>
+                `;
+            });
+        }
+        
+        // Display sync information
+        function displaySyncInfo(syncInfo) {
+            syncContainer.innerHTML = '';
+            
+            if (!syncInfo || (Object.keys(syncInfo).length === 0)) {
+                syncContainer.innerHTML = `
+                    <div class="empty-state">
+                        <p>🔄</p>
+                        <p>No synchronization information found</p>
+                        <p class="small text-muted">Browser synchronization data not detected in the analyzed file</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Display account information if available
+            if (syncInfo.account_info) {
+                const accountInfo = syncInfo.account_info;
+                const accountCard = document.createElement('div');
+                accountCard.className = 'card sync-info-card mb-4';
+                
+                accountCard.innerHTML = `
+                    <div class="card-header">
+                        <h5 class="mb-0">Sync Account Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="sync-account-info">
+                            <h6>Account Details</h6>
+                            <div><strong>Email:</strong> ${accountInfo.email || 'Not available'}</div>
+                            <div><strong>Account Name:</strong> ${accountInfo.name || 'Not available'}</div>
+                            <div><strong>Account Type:</strong> ${accountInfo.account_type || 'Not available'}</div>
+                            <div class="sync-timestamp"><strong>Last Sync Time:</strong> ${accountInfo.last_sync_time || 'Not available'}</div>
+                        </div>
+                    </div>
+                `;
+                
+                syncContainer.appendChild(accountCard);
+            }
+            
+            // Display sync settings if available
+            if (syncInfo.sync_settings) {
+                const syncSettings = syncInfo.sync_settings;
+                const settingsCard = document.createElement('div');
+                settingsCard.className = 'card sync-info-card mb-4';
+                
+                let dataTypesHTML = '';
+                if (syncSettings.data_types && syncSettings.data_types.length > 0) {
+                    dataTypesHTML = `
+                        <h6>Synchronized Data Types</h6>
+                        <div class="sync-data-types">
+                    `;
+                    
+                    syncSettings.data_types.forEach(type => {
+                        const statusClass = type.enabled ? 'enabled' : 'disabled';
+                        dataTypesHTML += `
+                            <div class="sync-data-type ${statusClass}">
+                                ${type.name} ${type.enabled ? '✓' : '✗'}
+                            </div>
+                        `;
+                    });
+                    
+                    dataTypesHTML += '</div>';
+                }
+                
+                settingsCard.innerHTML = `
+                    <div class="card-header">
+                        <h5 class="mb-0">Sync Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div><strong>Sync Enabled:</strong> ${syncSettings.enabled ? 'Yes' : 'No'}</div>
+                        <div><strong>First Sync Time:</strong> ${syncSettings.first_sync_time || 'Not available'}</div>
+                        <div><strong>Last Sync Time:</strong> ${syncSettings.last_sync_time || 'Not available'}</div>
+                        ${dataTypesHTML}
+                    </div>
+                `;
+                
+                syncContainer.appendChild(settingsCard);
+            }
+            
+            // Display synced visits if available
+            if (syncInfo.synced_visits && syncInfo.synced_visits.length > 0) {
+                const visitsCard = document.createElement('div');
+                visitsCard.className = 'card sync-info-card';
+                
+                let visitsHTML = `
+                    <div class="card-header">
+                        <h5 class="mb-0">Synchronized Visits</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container sync-visit-table">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>URL</th>
+                                        <th>Visit Time</th>
+                                        <th>Source</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+                
+                syncInfo.synced_visits.forEach(visit => {
+                    // Determine source badge class
+                    let sourceClass = '';
+                    let sourceText = visit.source_desc || '';
+                    
+                    if (sourceText.includes('Synchronised')) {
+                        sourceClass = 'source-synced';
+                    } else if (sourceText.includes('User browsed')) {
+                        sourceClass = 'source-browsed';
+                    } else if (sourceText.includes('Extension')) {
+                        sourceClass = 'source-extension';
+                    } else if (sourceText.includes('Imported')) {
+                        sourceClass = 'source-imported';
+                    }
+                    
+                    visitsHTML += `
+                        <tr>
+                            <td>${visit.title || 'Unknown'}</td>
+                            <td><a href="#" title="${visit.url}">${truncateText(visit.url, 50)}</a></td>
+                            <td>${visit.visit_time}</td>
+                            <td><span class="visit-source-badge ${sourceClass}">${sourceText}</span></td>
+                        </tr>
+                    `;
+                });
+                
+                visitsHTML += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                
+                visitsCard.innerHTML = visitsHTML;
+                syncContainer.appendChild(visitsCard);
+            }
+        }
+        
+        // Load a specific page
+        function loadPage(page) {
+            if (!currentFileId) return;
+            
+            // Show loader
+            loader.classList.remove('hidden');
+            
+            // Send request
+            fetch(`/get_page?file_id=${currentFileId}&page=${page}&page_size=${pageSize}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    loader.classList.add('hidden');
+                    return;
+                }
+                
+                // Update current data and page
+                currentData = data;
+                currentPage = data.page;
+                totalPages = data.total_pages;
+                
+                // Display results
+                displayResults(data);
+                
+                // Update pagination
+                generatePagination();
+                
+                // Hide loader
+                loader.classList.add('hidden');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error loading page: ' + error.message);
+                loader.classList.add('hidden');
+            });
+        }
+        
+        // Generate pagination links
+function generatePagination() {
+    pagination.innerHTML = '';
+    
+    // Previous button
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+    const prevLink = document.createElement('a');
+    prevLink.className = 'page-link';
+    prevLink.href = '#';
+    prevLink.innerHTML = '&laquo;';
+    prevLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentPage > 1) {
+            loadPage(currentPage - 1);
+        }
+    });
+    prevLi.appendChild(prevLink);
+    pagination.appendChild(prevLi);
+    
+    // Page numbers
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    // First page
+    if (startPage > 1) {
+        const firstLi = document.createElement('li');
+        firstLi.className = 'page-item';
+        const firstLink = document.createElement('a');
+        firstLink.className = 'page-link';
+        firstLink.href = '#';
+        firstLink.textContent = '1';
+        firstLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            loadPage(1);
+        });
+        firstLi.appendChild(firstLink);
+        pagination.appendChild(firstLi);
+        
+        if (startPage > 2) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            const ellipsisSpan = document.createElement('span');
+            ellipsisSpan.className = 'page-link';
+            ellipsisSpan.innerHTML = '...';
+            ellipsisLi.appendChild(ellipsisSpan);
+            pagination.appendChild(ellipsisLi);
+        }
+    }
+    
+    // Page numbers
+    for (let i = startPage; i <= endPage; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        const pageLink = document.createElement('a');
+        pageLink.className = 'page-link';
+        pageLink.href = '#';
+        pageLink.textContent = i;
+        pageLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            loadPage(i);
+        });
+        pageLi.appendChild(pageLink);
+        pagination.appendChild(pageLi);
+    }
+    
+    // Last page
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            const ellipsisSpan = document.createElement('span');
+            ellipsisSpan.className = 'page-link';
+            ellipsisSpan.innerHTML = '...';
+            ellipsisLi.appendChild(ellipsisSpan);
+            pagination.appendChild(ellipsisLi);
+        }
+        
+        const lastLi = document.createElement('li');
+        lastLi.className = 'page-item';
+        const lastLink = document.createElement('a');
+        lastLink.className = 'page-link';
+        lastLink.href = '#';
+        lastLink.textContent = totalPages;
+        lastLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            loadPage(totalPages);
+        });
+        lastLi.appendChild(lastLink);
+        pagination.appendChild(lastLi);
+    }
+    
+    // Next button
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+    const nextLink = document.createElement('a');
+    nextLink.className = 'page-link';
+    nextLink.href = '#';
+    nextLink.innerHTML = '&raquo;';
+    nextLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentPage < totalPages) {
+            loadPage(currentPage + 1);
+        }
+    });
+    nextLi.appendChild(nextLink);
+    pagination.appendChild(nextLi);
+}
+        
+        // Display results
+        function displayResults(data) {
+            // Update summary
+            browserTypeElement.textContent = data.browser_type === 'firefox' ? 'Firefox' : 'Chrome/Edge';
+            totalEntriesElement.textContent = data.total_entries.toLocaleString();
+            
+            // Clear table
+            historyTableBody.innerHTML = '';
+            
+            // Add entries to table
+            data.entries.forEach(entry => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${entry.title || 'Unknown'}</td>
+                    <td><a href="#" title="${entry.url}">${truncateText(entry.url, 50)}</a></td>
+                    <td>${entry.visit_time}</td>
+                    <td>${entry.domain}</td>
+                `;
+                
+                historyTableBody.appendChild(row);
+            });
+        }
+        
+        // Display downloads
+        function displayDownloads(downloads, downloadSources) {
+            downloadsContainer.innerHTML = '';
+            
+            if (!downloads || downloads.length === 0) {
+                downloadsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <p>📥</p>
+                        <p>No download history found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Enable export button
+            exportDownloadsButton.disabled = false;
+            
+            // Group download sources by filename for easy lookup
+            const sourcesByFilename = {};
+            if (downloadSources && downloadSources.length > 0) {
+                downloadSources.forEach(source => {
+                    sourcesByFilename[source.filename] = source;
+                });
+            }
+            
+            // Create download items
+            downloads.forEach(download => {
+                const downloadItem = document.createElement('div');
+                downloadItem.className = 'download-item';
+                downloadItem.setAttribute('data-filename', download.filename || '');
+                downloadItem.setAttribute('data-url', download.url || '');
+                
+                // Determine file type icon based on file extension
+                const fileExtension = download.filename ? download.filename.split('.').pop().toLowerCase() : '';
+                let fileTypeIcon = '📄'; // Default document icon
+                
+                if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(fileExtension)) {
+                    fileTypeIcon = '🖼️'; // Image
+                } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(fileExtension)) {
+                    fileTypeIcon = '🎬'; // Video
+                } else if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(fileExtension)) {
+                    fileTypeIcon = '🎵'; // Audio
+                } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(fileExtension)) {
+                    fileTypeIcon = '🗜️'; // Archive
+                } else if (['pdf'].includes(fileExtension)) {
+                    fileTypeIcon = '📕'; // PDF
+                } else if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(fileExtension)) {
+                    fileTypeIcon = '📊'; // Office document
+                } else if (['exe', 'msi', 'app'].includes(fileExtension)) {
+                    fileTypeIcon = '⚙️'; // Executable
+                }
+                
+                // Get download status badge
+                let statusBadge = '';
+                if (download.status) {
+                    let badgeClass = 'bg-secondary';
+                    
+                    if (download.status === 'completed') {
+                        badgeClass = 'bg-success';
+                    } else if (download.status === 'failed' || download.status === 'interrupted') {
+                        badgeClass = 'bg-danger';
+                    } else if (download.status === 'in_progress') {
+                        badgeClass = 'bg-primary';
+                    } else if (download.status === 'canceled') {
+                        badgeClass = 'bg-warning';
+                    }
+                    
+                    statusBadge = `<span class="badge ${badgeClass}">${download.status}</span>`;
+                }
+                
+                // Create download item content
+                downloadItem.innerHTML = `
+                    <h5>
+                        <span class="file-type-icon">${fileTypeIcon}</span>
+                        ${download.filename || 'Unknown file'}
+                        ${statusBadge}
+                    </h5>
+                    <div class="download-meta">
+                        <span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock" viewBox="0 0 16 16">
+                                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+                            </svg>
+                            ${download.download_time || 'Unknown time'}
+                        </span>
+                        ${download.file_size ? 
+                            `<span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark" viewBox="0 0 16 16">
+                                    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                                </svg>
+                                ${formatFileSize(download.file_size)}
+                            </span>` 
+                            : ''
+                        }
+                        ${download.mime_type ? 
+                            `<span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-text" viewBox="0 0 16 16">
+                                    <path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/>
+                                    <path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5L9.5 0zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                                </svg>
+                                ${download.mime_type}
+                            </span>` 
+                            : ''
+                        }
+                    </div>
+                    <div>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-link-45deg" viewBox="0 0 16 16">
+                            <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1.002 1.002 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4.018 4.018 0 0 1-.128-1.287z"/>
+                            <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243L6.586 4.672z"/>
+                        </svg>
+                        <a href="#" title="${download.url}">${truncateText(download.url, 80)}</a>
+                    </div>
+                `;
+                
+                // Add source references if available
+                const sourceInfo = sourcesByFilename[download.filename];
+                if (sourceInfo && sourceInfo.sources && sourceInfo.sources.length > 0) {
+                    const sourcesContainer = document.createElement('div');
+                    sourcesContainer.className = 'mt-3';
+                    
+                    // Add toggle button for sources
+                    const toggleButton = document.createElement('button');
+                    toggleButton.className = 'toggle-sources';
+                    toggleButton.textContent = 'Show download sources';
+                    toggleButton.addEventListener('click', function() {
+                        const content = this.nextElementSibling;
+                        if (content.style.display === 'none') {
+                            content.style.display = 'block';
+                            this.textContent = 'Hide download sources';
+                        } else {
+                            content.style.display = 'none';
+                            this.textContent = 'Show download sources';
+                        }
+                    });
+                    
+                    sourcesContainer.appendChild(toggleButton);
+                    
+                    // Container for source items
+                    const sourcesContent = document.createElement('div');
+                    sourcesContent.style.display = 'none';
+                    
+                    // Add heading
+                    const heading = document.createElement('h6');
+                    heading.className = 'mt-2 mb-2';
+                    heading.textContent = 'Source Pages';
+                    sourcesContent.appendChild(heading);
+                    
+                    // Add source items
+                    sourceInfo.sources.forEach(source => {
+                        const sourceItem = document.createElement('div');
+                        sourceItem.className = `download-source ${source.match_type}`;
+                        
+                        sourceItem.innerHTML = `
+                            <div class="download-source-title">
+                                ${source.title || 'Unknown Page'}
+                                <span class="badge bg-${getBadgeColorForMatchType(source.match_type)}">${formatMatchType(source.match_type)}</span>
+                            </div>
+                            <div class="download-source-url">${truncateText(source.url, 80)}</div>
+                            <div class="download-source-time">${source.time}</div>
+                        `;
+                        
+                        sourcesContent.appendChild(sourceItem);
+                    });
+                    
+                    sourcesContainer.appendChild(sourcesContent);
+                    downloadItem.appendChild(sourcesContainer);
+                }
+                
+                downloadsContainer.appendChild(downloadItem);
+            });
+        }
+        
+        // Get badge color for match type
+        function getBadgeColorForMatchType(matchType) {
+            switch (matchType) {
+                case 'same_domain': return 'success';
+                case 'file_pattern': return 'warning';
+                case 'temporal': return 'secondary';
+                default: return 'primary';
+            }
+        }
+        
+        // Format match type for display
+        function formatMatchType(matchType) {
+            switch (matchType) {
+                case 'same_domain': return 'Same Domain';
+                case 'file_pattern': return 'File Pattern';
+                case 'temporal': return 'Temporal';
+                default: return matchType;
+            }
+        }
+        
+        // Format file size
+        function formatFileSize(bytes) {
+            if (!bytes || isNaN(bytes)) return 'Unknown size';
+            
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let size = parseInt(bytes, 10);
+            let unitIndex = 0;
+            
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex++;
+            }
+            
+            return `${size.toFixed(1)} ${units[unitIndex]}`;
+        }
+        
+        // Calculate domain statistics
+        function calculateDomainStats(entries) {
+            // Count domain occurrences
+            const domainCounts = {};
+            
+            entries.forEach(entry => {
+                const domain = entry.domain;
+                if (domain) {
+                    domainCounts[domain] = (domainCounts[domain] || 0) + 1;
+                }
+            });
+            
+            // Convert to array and sort
+            const domainArray = Object.entries(domainCounts)
+                .map(([domain, count]) => ({ domain, count }))
+                .sort((a, b) => b.count - a.count);
+            
+            // Display top domains
+            domainStats.innerHTML = '<h6>Top Domains</h6>';
+            
+            // Take top 20 domains
+            const topDomains = domainArray.slice(0, 20);
+            
+            topDomains.forEach(item => {
+                const domainItem = document.createElement('div');
+                domainItem.className = 'domain-item';
+                domainItem.innerHTML = `
+                    <span>${item.domain}</span>
+                    <span class="domain-count">${item.count}</span>
+                `;
+                domainStats.appendChild(domainItem);
+            });
+        }
+        
+        // Filter table based on search input
+        function filterTable() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const rows = historyTableBody.querySelectorAll('tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // Filter downloads based on search input
+        function filterDownloads() {
+            const searchTerm = downloadSearchInput.value.toLowerCase();
+            const downloadItems = downloadsContainer.querySelectorAll('.download-item');
+            
+            downloadItems.forEach(item => {
+                const filename = item.getAttribute('data-filename').toLowerCase();
+                const url = item.getAttribute('data-url').toLowerCase();
+                const text = item.textContent.toLowerCase();
+                
+                if (filename.includes(searchTerm) || url.includes(searchTerm) || text.includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+        
+        // Helper function to truncate text
+        function truncateText(text, maxLength) {
+            if (!text) return '';
+            return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+        }
+    </script>
+</body>
+</html>
